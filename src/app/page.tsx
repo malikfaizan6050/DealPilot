@@ -1,65 +1,154 @@
-import Image from "next/image";
+﻿"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { signIn, signOut, useSession } from "next-auth/react";
+
+type Lead = {
+  Id: string;
+  Name: string;
+  Company?: string;
+  Status?: string;
+};
+
+export default function Dashboard() {
+  const { data: session, status } = useSession();
+  const signedIn = status === "authenticated" && !session?.error;
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [debug, setDebug] = useState<unknown>(null);
+
+  useEffect(() => {
+
+    if (!signedIn) return;
+
+    async function loadData() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const res = await fetch("/api/salesforce/leads", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        const data = await res.json();
+        setDebug(data.debug ?? null);
+
+        if (!res.ok) {
+          setError(data?.error || "Failed to fetch leads");
+          setLeads([]);
+          if (res.status === 401) {
+            await signOut({ callbackUrl: "/" });
+          }
+          return;
+        }
+
+        setLeads(data.leads || []);
+      } catch (err) {
+        console.error("Fetch failed", err);
+        setError("Unable to load leads. Make sure you are signed in.");
+        setLeads([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [signedIn]);
+
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="min-h-screen bg-gray-50 text-gray-900 p-6 md:p-12 relative overflow-hidden">
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-red-200/50 rounded-full blur-[120px] animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-red-100/50 rounded-full blur-[120px] animate-pulse delay-1000"></div>
+
+      <div className="max-w-7xl mx-auto relative z-10">
+        <header className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 bg-white/60 backdrop-blur-lg p-8 rounded-3xl border border-gray-200 shadow-sm">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">DealPilot <span className="text-red-600">AI</span></h1>
+            <p className="text-gray-500 mt-1">Enterprise Salesforce Insights</p>
+          </div>
+          <div className="flex gap-4">
+            {signedIn ? (
+              <button
+                onClick={() => signOut()}
+                className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-all shadow-lg shadow-red-200"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <button
+                onClick={() => signIn("salesforce")}
+                className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-all shadow-lg shadow-red-200"
+              >
+                Sign in with Salesforce
+              </button>
+            )}
+          </div>
+        </header>
+
+        {!signedIn ? (
+          <div className="rounded-3xl bg-white border border-gray-200 p-12 shadow-sm text-center">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Please sign in to view Salesforce leads</h2>
+            <p className="text-gray-500">This dashboard requires an authenticated Salesforce session to fetch leads.</p>
+          </div>
+        ) : (
+          <>
+            {error && (
+              <div className="mb-6 rounded-3xl bg-red-50 border border-red-200 p-6 text-red-700">
+                <strong>Error:</strong> {error}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              {[
+                { label: "TOTAL LEADS", val: leads.length, border: "border-red-100" },
+                { label: "IN PROGRESS", val: leads.filter(l => l.Status?.includes("Working")).length, border: "border-red-100" },
+                { label: "NEW ENTRIES", val: leads.filter(l => !l.Status?.includes("Working")).length, border: "border-red-100" }
+              ].map((item, i) => (
+                <div key={i} className={`p-8 rounded-3xl bg-white border ${item.border} shadow-sm hover:shadow-md transition-shadow`}>
+                  <p className="text-[10px] font-bold tracking-widest text-gray-400">{item.label}</p>
+                  <h2 className="text-5xl font-black mt-3 text-gray-900">{loading ? "..." : item.val}</h2>
+                </div>
+              ))}
+            </div>
+
+            {leads.length === 0 && debug && (
+              <div className="mb-6 rounded-3xl bg-yellow-50 border border-yellow-200 p-6 text-yellow-700">
+                <p className="font-semibold">Debug data:</p>
+                <pre className="mt-2 max-h-40 overflow-auto text-xs text-gray-700">{JSON.stringify(debug, null, 2)}</pre>
+              </div>
+            )}
+
+            <div className="bg-white border border-gray-200 rounded-3xl p-1 shadow-sm">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-gray-400 text-[10px] uppercase tracking-widest border-b border-gray-100">
+                    <th className="p-6">Lead Name</th>
+                    <th className="p-6">Company</th>
+                    <th className="p-6">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {leads.map((lead) => (
+                    <tr key={lead.Id} className="hover:bg-red-50/50 transition-colors">
+                      <td className="p-6 font-bold text-gray-900">
+                        <Link href={`/leads/${lead.Id}`}>{lead.Name}</Link>
+                      </td>
+                      <td className="p-6 text-gray-600">{lead.Company}</td>
+                      <td className="p-6">
+                        <span className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-xs font-semibold border border-red-100">{lead.Status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
