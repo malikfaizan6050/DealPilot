@@ -1,34 +1,27 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type { ReactNode } from "react";
 import { Providers } from "@/app/providers";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DealPilot",
-  description: "Salesforce lead management dashboard",
+  title: {
+    default: "DealPilot AI",
+    template: "%s | DealPilot AI",
+  },
+  description:
+    "AI-powered Salesforce Opportunity pipeline and deal-health intelligence.",
 };
+
+type RootLayoutProps = Readonly<{
+  children: ReactNode;
+}>;
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: RootLayoutProps) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="en" className="h-full">
+      <body className="flex min-h-full flex-col font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>
